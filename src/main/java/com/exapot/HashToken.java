@@ -3,7 +3,7 @@ package com.exapot;
 import java.security.SecureRandom;
 
 /**
- * Created by Jason Ara (Jay.Ara) on 7/11/17.
+ * Created by Ehsaniara
  * From https://www.exapot.com
  */
 public class HashToken {
