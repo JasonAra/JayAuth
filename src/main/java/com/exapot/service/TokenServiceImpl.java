@@ -1,29 +1,38 @@
 package com.exapot.service;
 
 import com.exapot.HashToken;
+import com.exapot.controller.TokenController;
 import com.exapot.model.Token;
 import com.exapot.model.TokenImpl;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.Enumeration;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.UUID;
 
 
 /**
  * Created by Ehsaniara
- * From https://www.exapot.com
+ * From https://github.com/ehsaniara
  */
 @Service
 public class TokenServiceImpl implements TokenService {
 
-    private long expTimeSec = 30 * 60 * 1000;
-
-
-    public void setExpTimeSec(long expTimeSec) {
-        this.expTimeSec = expTimeSec;
+    public void setExpTimeSec(int t) {
+        TokenController.expTimeSec = t;
     }
 
-    public String addObject(Object obj, long id) throws Exception {
+    public String addToken(HttpServletRequest req,
+                           HttpServletResponse res,
+                           Object obj, long id) throws Exception {
+
+        if (req == null)
+            throw new Exception("Null HttpServletRequest");
+
+        if (res == null)
+            throw new Exception("Null HttpServletResponse");
 
         if (obj == null)
             throw new Exception("Null Object");
@@ -31,28 +40,62 @@ public class TokenServiceImpl implements TokenService {
         if (id < 1)
             throw new Exception("Invalid Id");
 
-        if (com.exapot.controller.TokenController.tokenMap.containsKey(id))
-            throw new Exception("Id already exsist");
 
         Token token = new TokenImpl(obj);
         token.setUserId(id);
         token.setTokenValue(new HashToken().getToken());
-        token.setExpDate(System.currentTimeMillis() + expTimeSec);
-        com.exapot.controller.TokenController.tokenMap.put(id, token);
+        token.setExpDate(System.currentTimeMillis() + TokenController.expTimeSec);
+        token.setTokenSeed(UUID.randomUUID().toString());
+
+
+        TokenController.tokenMap.put(id, token);
+        res.setHeader(token.getTokenValue(), token.getTokenSeed());
+
+
+        Enumeration<String> headerNames = req.getHeaderNames();
+        if (headerNames != null) {
+            while (headerNames.hasMoreElements()) {
+                String element = headerNames.nextElement();
+                System.out.println(element + ": " + req.getHeader(element));
+                token.getHeaders().put(element, req.getHeader(element));
+            }
+        }
+
+
+        System.out.println("TOKEN CREATED AS:" + token.getTokenValue());
         return token.getTokenValue();
     }
 
-    public boolean isTokenValid(String inToken) throws Exception {
+    public boolean isTokenValid(HttpServletRequest req,
+                                HttpServletResponse res, String inToken) throws Exception {
+
+        //controlling the token value
         if (inToken == null || "".equals(inToken))
             throw new Exception("Invalid Token");
 
-        for (Token value : com.exapot.controller.TokenController.tokenMap.values()) {
-            if (value.getTokenValue().equals(inToken)) {
+        //some oldSchool cleaning
+        final String token = inToken.replaceAll("[^a-zA-Z0-9\\\\s]", "");
+
+        //controlling the req value
+        if (req == null || req.getHeader(token) == null || "".equals(req.getHeader(token)))
+            throw new Exception("Invalid Token");
+
+        Iterator<Token> iterator = TokenController.tokenMap.values().iterator();
+        while (iterator.hasNext()) {
+            Token value = iterator.next();
+            if (value.getTokenValue().equals(token)
+                    && value.getTokenSeed().equals(req.getHeader(token))) {
+
+                //user-agent check
+                if (!value.getHeaders().get("user-agent").equals(req.getHeader("user-agent"))) {
+                    removeToken(req, res, value.getUserId());
+                    return false;
+                }
 
                 if (value.getExpDate() > System.currentTimeMillis()) {
                     return true;
                 } else {
-                    removeObject(value.getUserId());
+                    removeToken(req, res, value.getUserId());
                     return false;
                 }
             }
@@ -60,46 +103,46 @@ public class TokenServiceImpl implements TokenService {
         return false;
     }
 
-    public Object getObject(String inToken) throws Exception {
+    public Object getObject(HttpServletRequest req,
+                            HttpServletResponse res, String inToken) throws Exception {
         if (inToken == null || "".equals(inToken))
             throw new Exception("Invalid Token");
 
-        for (Token value : com.exapot.controller.TokenController.tokenMap.values()) {
+        //some oldSchool cleaning
+        final String token = inToken.replaceAll("[^a-zA-Z0-9\\\\s]", "");
 
+        Iterator<Token> iterator = TokenController.tokenMap.values().iterator();
+        while (iterator.hasNext()) {
+            Token value = iterator.next();
+
+            //remove any object that is expired
             if (value.getExpDate() < System.currentTimeMillis()) {
-                removeObject(value.getUserId());
+                removeToken(req, res, value.getUserId());
             }
 
-            if (value.getTokenValue().equals(inToken) && value.getExpDate() > System.currentTimeMillis())
-                return value.getUserObject();
+            if (value.getTokenValue().equals(token) && value.getExpDate() > System.currentTimeMillis())
+                return value.getObject();
 
         }
         return null;
     }
 
-    public void removeObject(String inToken) throws Exception {
+    public void removeToken(HttpServletRequest req,
+                            HttpServletResponse res, String inToken) throws Exception {
         if (inToken == null || "".equals(inToken))
             throw new Exception("Invalid Token");
 
-        for (Iterator<Map.Entry<Long, Token>> it
-             = com.exapot.controller.TokenController.tokenMap.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<Long, Token> entry = it.next();
-            if (entry.getValue().equals(inToken)) {
-                it.remove();
-            }
-        }
+        //some oldSchool cleaning
+        final String token = inToken.replaceAll("[^a-zA-Z0-9\\\\s]", "");
+
+        TokenController.tokenMap.entrySet().removeIf(entry -> entry.getValue().equals(token));
     }
 
-    public void removeObject(long id) throws Exception {
+    public void removeToken(HttpServletRequest req,
+                            HttpServletResponse res, long id) throws Exception {
         if (id < 1)
             throw new Exception("Invalid Id");
 
-        for (Iterator<Map.Entry<Long, Token>> it
-             = com.exapot.controller.TokenController.tokenMap.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<Long, Token> entry = it.next();
-            if (entry.getKey() == id) {
-                it.remove();
-            }
-        }
+        TokenController.tokenMap.entrySet().removeIf(entry -> entry.getKey() == id);
     }
 }

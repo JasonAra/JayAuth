@@ -1,13 +1,15 @@
 package com.exapot.model;
 
+import java.util.Map;
+
 /**
  * Created by Ehsaniara
  * From https://www.exapot.com
  */
 public interface Token {
-    Object getUserObject();
+    Object getObject();
 
-    void setUserObject(Object userObject);
+    void setObject(Object object);
 
     long getUserId();
 
@@ -20,4 +22,12 @@ public interface Token {
     long getExpDate();
 
     void setExpDate(long expDate);
+
+    String getTokenSeed();
+
+    void setTokenSeed(String tokenSeed);
+
+    Map<String, String> getHeaders();
+
+    void setHeaders(Map<String, String> headers);
 }

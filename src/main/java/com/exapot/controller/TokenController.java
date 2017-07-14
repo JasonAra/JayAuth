@@ -14,6 +14,8 @@ import java.util.Map;
 @Controller
 public class TokenController {
 
+    public static long expTimeSec = 30 * 60 * 1000;
+
     public static Map<Long, Token> tokenMap = Collections.synchronizedMap(new HashMap<Long, Token>());
 
 

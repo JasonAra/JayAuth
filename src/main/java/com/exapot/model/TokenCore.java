@@ -1,21 +1,27 @@
 package com.exapot.model;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Created by Ehsaniara
  * From https://www.exapot.com
  */
 public abstract class TokenCore {
+
     private long userId;
     private String tokenValue;
-    private Object userObject;
+    private String tokenSeed;
+    private Object object;
     private long expDate;
+    private Map<String, String> headers = new HashMap<>();
 
-    public Object getUserObject() {
-        return userObject;
+    public Object getObject() {
+        return object;
     }
 
-    public void setUserObject(Object userObject) {
-        this.userObject = userObject;
+    public void setObject(Object object) {
+        this.object = object;
     }
 
     public long getUserId() {
@@ -40,5 +46,21 @@ public abstract class TokenCore {
 
     public void setExpDate(long expDate) {
         this.expDate = expDate;
+    }
+
+    public String getTokenSeed() {
+        return tokenSeed;
+    }
+
+    public void setTokenSeed(String tokenSeed) {
+        this.tokenSeed = tokenSeed;
+    }
+
+    public Map<String, String> getHeaders() {
+        return headers;
+    }
+
+    public void setHeaders(Map<String, String> headers) {
+        this.headers = headers;
     }
 }

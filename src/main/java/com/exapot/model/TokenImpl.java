@@ -6,7 +6,7 @@ package com.exapot.model;
  */
 public class TokenImpl extends TokenCore implements Token {
 
-    public TokenImpl(Object userObject) {
-        setUserObject(userObject);
+    public TokenImpl(Object object) {
+        setObject(object);
     }
 }
